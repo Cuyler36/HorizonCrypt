@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Security.Cryptography;
-using System.Text;
 
 namespace HorizonCrypt
 {
@@ -27,17 +26,17 @@ namespace HorizonCrypt
     // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
     // THE SOFTWARE.
 
-    public class Aes128CounterMode : SymmetricAlgorithm
+    public sealed class Aes128CounterMode : SymmetricAlgorithm
     {
         private readonly byte[] _counter;
         private readonly AesManaged _aes;
 
         public Aes128CounterMode(byte[] counter)
         {
-            if (counter == null) throw new ArgumentNullException("counter");
+            if (counter == null)
+                throw new ArgumentNullException(nameof(counter));
             if (counter.Length != 16)
-                throw new ArgumentException(
-                    $"Counter size must be same as block size (actual: {counter.Length}, expected: {16})");
+                throw new ArgumentException($"Counter size must be same as block size (actual: {counter.Length}, expected: {16})");
 
             _aes = new AesManaged
             {
@@ -67,9 +66,14 @@ namespace HorizonCrypt
         {
             // IV not needed in Counter Mode
         }
+
+        protected override void Dispose(bool disposing)
+        {
+            _aes.Dispose();
+        }
     }
 
-    public class CounterModeCryptoTransform : ICryptoTransform
+    public sealed class CounterModeCryptoTransform : ICryptoTransform
     {
         private readonly byte[] _counter;
         private readonly ICryptoTransform _counterEncryptor;
@@ -78,12 +82,14 @@ namespace HorizonCrypt
 
         public CounterModeCryptoTransform(SymmetricAlgorithm symmetricAlgorithm, byte[] key, byte[] counter)
         {
-            if (symmetricAlgorithm == null) throw new ArgumentNullException("symmetricAlgorithm");
-            if (key == null) throw new ArgumentNullException("key");
-            if (counter == null) throw new ArgumentNullException("counter");
+            if (symmetricAlgorithm == null)
+                throw new ArgumentNullException(nameof(symmetricAlgorithm));
+            if (key == null)
+                throw new ArgumentNullException(nameof(key));
+            if (counter == null)
+                throw new ArgumentNullException(nameof(counter));
             if (counter.Length != symmetricAlgorithm.BlockSize / 8)
-                throw new ArgumentException(
-                    $"Counter size must be same as block size (actual: {counter.Length}, expected: {symmetricAlgorithm.BlockSize / 8})");
+                throw new ArgumentException($"Counter size must be same as block size (actual: {counter.Length}, expected: {symmetricAlgorithm.BlockSize / 8})");
 
             _symmetricAlgorithm = symmetricAlgorithm;
             _counter = counter;
@@ -139,13 +145,14 @@ namespace HorizonCrypt
             }
         }
 
-        public int InputBlockSize { get { return _symmetricAlgorithm.BlockSize / 8; } }
-        public int OutputBlockSize { get { return _symmetricAlgorithm.BlockSize / 8; } }
-        public bool CanTransformMultipleBlocks { get { return true; } }
-        public bool CanReuseTransform { get { return false; } }
+        public int InputBlockSize => _symmetricAlgorithm.BlockSize / 8;
+        public int OutputBlockSize => _symmetricAlgorithm.BlockSize / 8;
+        public bool CanTransformMultipleBlocks => true;
+        public bool CanReuseTransform => false;
 
         public void Dispose()
         {
+            _counterEncryptor.Dispose();
         }
     }
 }

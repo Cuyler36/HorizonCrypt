@@ -4,26 +4,26 @@ namespace HorizonCrypt
 {
     public static class Encryption
     {
-        private static byte[] GetParam(in uint[] data, in int idx)
+        private static byte[] GetParam(uint[] data, in int index)
         {
-            var prms = data[data[idx + 1] & 0x7F] & 0x7F;
-            var sead = new SeadRandom(data[data[idx] & 0x7F]);
-            var rndRollCount = (prms & 0xF) + 1;
+            var sead = new SEADRandom(data[data[index] & 0x7F]);
+            var prms = data[data[index + 1] & 0x7F] & 0x7F;
 
+            var rndRollCount = (prms & 0xF) + 1;
             for (var i = 0; i < rndRollCount; i++)
                 sead.GetU64();
 
-            var ret = new byte[16];
-            for (var i = 0; i < 16; i++)
-                ret[i] = (byte)(sead.GetU32() >> 24);
+            var result = new byte[0x10];
+            for (var i = 0; i < result.Length; i++)
+                result[i] = (byte)(sead.GetU32() >> 24);
 
-            return ret;
+            return result;
         }
 
-        public static byte[] Decrypt(in byte[] headerData, in byte[] encData)
+        public static byte[] Decrypt(byte[] headerData, byte[] encData)
         {
             // First 256 bytes go unused
-            var importantData = new uint[128];
+            var importantData = new uint[0x80];
             Buffer.BlockCopy(headerData, 0x100, importantData, 0, 0x200);
 
             // Set up Key
@@ -33,17 +33,15 @@ namespace HorizonCrypt
             var counter = GetParam(importantData, 2);
 
             // Do the AES
-            using (var aesCtr = new Aes128CounterMode(counter))
-            {
-                var transform = aesCtr.CreateDecryptor(key, counter);
-                var decData = new byte[encData.Length];
+            using var aesCtr = new Aes128CounterMode(counter);
+            var transform = aesCtr.CreateDecryptor(key, counter);
+            var decData = new byte[encData.Length];
 
-                transform.TransformBlock(encData, 0, encData.Length, decData, 0);
-                return decData;
-            }
+            transform.TransformBlock(encData, 0, encData.Length, decData, 0);
+            return decData;
         }
 
-        private static uint[] PrependedData =
+        private static readonly uint[] PrependedData =
         {
             0x00000067, 0x0000006F, 0x00000002, 0x00000002, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
             0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000,
@@ -55,13 +53,12 @@ namespace HorizonCrypt
             0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000, 0x00000000
         };
 
-        private static (byte[], byte[], byte[]) GenerateHeaderFile()
+        private static (byte[] headerData, byte[] key, byte[] ctr) GenerateHeaderFile(uint seed)
         {
-            var encryptData = new uint[0x80];
-
             // Generate 128 Random uints which will be used for params
-            var random = new SeadRandom((uint)DateTime.Now.Ticks);
-            for (var i = 0; i < 128; i++)
+            var random = new SEADRandom(seed);
+            var encryptData = new uint[128];
+            for (var i = 0; i < encryptData.Length; i++)
                 encryptData[i] = random.GetU32();
 
             var headerData = new byte[0x300];
@@ -70,20 +67,18 @@ namespace HorizonCrypt
             return (headerData, GetParam(encryptData, 0), GetParam(encryptData, 2));
         }
 
-        public static (byte[], byte[]) Encrypt(in byte[] data)
+        public static (byte[] encData, byte[] headerData) Encrypt(byte[] data, uint seed)
         {
             // Generate header file and get key and counter
-            var (headerData, key, ctr) = GenerateHeaderFile();
+            var (headerData, key, ctr) = GenerateHeaderFile(seed);
 
             // Encrypt file
-            using (var aesCtr = new Aes128CounterMode(ctr))
-            {
-                var transform = aesCtr.CreateEncryptor(key, ctr);
-                var encData = new byte[data.Length];
-                transform.TransformBlock(data, 0, data.Length, encData, 0);
+            using var aesCtr = new Aes128CounterMode(ctr);
+            var transform = aesCtr.CreateEncryptor(key, ctr);
+            var encData = new byte[data.Length];
+            transform.TransformBlock(data, 0, data.Length, encData, 0);
 
-                return (encData, headerData);
-            }
+            return (encData, headerData);
         }
     }
 }
