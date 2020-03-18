@@ -2,7 +2,7 @@
 Animal Crossing: New Horizons Save Encryptor/Decryptor
 
 ## Usage
-HorizonCrypt [-c|-d] <input>
+HorizonCrypt \[-c|-d\] \<input\>
 
 ## Examples
 #### Decrypt
