@@ -2,11 +2,18 @@
 Animal Crossing: New Horizons Save Encryptor/Decryptor
 
 ## Usage
-HorizonCrypt \[-c|-d\] \<input\>
+HorizonCrypt \[-b\] \[-c|-d\] \<input\>
 
 ## Examples
-#### Decrypt
+
+#### Decrypt File
 HorizonCrypt -d ./main.dat
 
-#### Encrypt
+#### Encrypt File
 HorizonCrypt -c ./main_decrypted.dat
+
+#### Decrypt Folder
+HorizonCrypt -b -d ./
+
+#### Encrypt Folder
+HorizonCrypt -b -c ./
