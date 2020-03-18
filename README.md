@@ -9,4 +9,4 @@ HorizonCrypt \[-c|-d\] \<input\>
 HorizonCrypt -d ./main.dat
 
 #### Encrypt
-HorizonCrypt -c ./mainEncrypted.dat
+HorizonCrypt -c ./main_decrypted.dat
