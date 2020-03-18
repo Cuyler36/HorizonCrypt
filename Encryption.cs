@@ -33,12 +33,14 @@ namespace HorizonCrypt
             var counter = GetParam(importantData, 2);
 
             // Do the AES
-            using var aesCtr = new Aes128CounterMode(counter);
-            var transform = aesCtr.CreateDecryptor(key, counter);
-            var decData = new byte[encData.Length];
+            using (var aesCtr = new Aes128CounterMode(counter))
+            {
+                var transform = aesCtr.CreateDecryptor(key, counter);
+                var decData = new byte[encData.Length];
 
-            transform.TransformBlock(encData, 0, encData.Length, decData, 0);
-            return decData;
+                transform.TransformBlock(encData, 0, encData.Length, decData, 0);
+                return decData;
+            }
         }
 
         private static uint[] PrependedData =
@@ -74,12 +76,14 @@ namespace HorizonCrypt
             var (headerData, key, ctr) = GenerateHeaderFile();
 
             // Encrypt file
-            using var aesCtr = new Aes128CounterMode(ctr);
-            var transform = aesCtr.CreateEncryptor(key, ctr);
-            var encData = new byte[data.Length];
-            transform.TransformBlock(data, 0, data.Length, encData, 0);
+            using (var aesCtr = new Aes128CounterMode(ctr))
+            {
+                var transform = aesCtr.CreateEncryptor(key, ctr);
+                var encData = new byte[data.Length];
+                transform.TransformBlock(data, 0, data.Length, encData, 0);
 
-            return (encData, headerData);
+                return (encData, headerData);
+            }
         }
     }
 }

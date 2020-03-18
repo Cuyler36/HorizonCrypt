@@ -23,11 +23,6 @@ namespace HorizonCrypt
             }
         }
 
-        public SeadRandom(uint[] seeds)
-        {
-            internalData = seeds[..];
-        }
-
         public uint GetU32()
         {
             uint v1 = internalData[0] ^ (internalData[0] << 11);
