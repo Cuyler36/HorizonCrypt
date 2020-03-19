@@ -145,16 +145,62 @@ namespace HorizonCrypt.ConsoleApp
                     case Mode.Encrypt:
                         {
                             var decData = File.ReadAllBytes(file);
+
+                            // Update hashes
+                            TryUpdateFileHashes(decData);
+
                             var seed = (uint)DateTime.Now.Ticks;
                             var (data, headerData) = Encryption.Encrypt(decData, seed);
 
                             File.WriteAllBytes(Path.Combine(outDir, filename + ".dat"), data);
                             File.WriteAllBytes(Path.Combine(outDir, filename + "Header.dat"), headerData);
-                            Console.WriteLine($"Encrypted {file}");
+                            Console.WriteLine($"Encrypted: {file}\n");
                             break;
                         }
                 }
             }
+        }
+
+        private static void TryUpdateFileHashes(in byte[] data)
+        {
+            HashInfo? selectedInfo = null;
+            foreach (var info in HashInfo.VersionHashInfoList)
+            {
+                var valid = true;
+                for (var i = 0; i < 4; i++)
+                {
+                    if (info.RevisionMagic[i] != BitConverter.ToUInt32(data, i * 4))
+                    {
+                        valid = false;
+                        break;
+                    }
+                }
+                if (valid)
+                {
+                    selectedInfo = info;
+                    break;
+                }
+            }
+
+            if (selectedInfo != null)
+            {
+                HashSet thisFileSet = selectedInfo[(uint)data.Length];
+                if (thisFileSet != null)
+                {
+                    Console.WriteLine($"{thisFileSet.FileName} rev {selectedInfo.RevisionId} detected!");
+                    foreach (var hashRegion in thisFileSet)
+                    {
+                        UpdateAndPrintHash(data, hashRegion.HashOffset, hashRegion.BeginOffset, hashRegion.Size);
+                    }
+                }
+            }
+        }
+
+        private static void UpdateAndPrintHash(in byte[] data, int hashOffset, int startOffset, uint size)
+        {
+            var currHash = BitConverter.ToUInt32(data, hashOffset);
+            var genHash = Murmur3.UpdateMurmur32(data, hashOffset, startOffset, size);
+            Console.WriteLine($"Updated hash @ 0x{hashOffset:X6} [0x{startOffset:X6} - 0x{(startOffset + size):X6}] from 0x{currHash:X8} to 0x{genHash:X8}");
         }
 
         private static void PrintUsage()
